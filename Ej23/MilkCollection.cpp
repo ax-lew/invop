@@ -94,7 +94,7 @@ void solveMIP(Problema * prob){
     int status;
     
     // Variable para indicar cuantas variables va a tener nuestro modelo
-    int cantvar = prob->farmsQty*(farmsQty-1);
+    int cantvar = prob->farmsQty*(prob->farmsQty-1);
     
     // Variables para definir las variables del modelo y la funcion objetivo
     double *obj=(double*)malloc(sizeof(double)*cantvar);
@@ -212,7 +212,7 @@ void solveMIP(Problema * prob){
 	    		int offset = days*prob->farmsQty*(prob->farmsQty-1)/2;
 	    		int index = i*prob->farmsQty+j+offset;
 	    		rmatval[index] = 1.0;
-	    		rmatind[index] = prob->farmsInfo[i];
+	    		rmatind[index] = prob->farmsInfo[i].toCollect;
 	    	}
 	    }
 	    status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
@@ -256,9 +256,9 @@ void solveMIP(Problema * prob){
 	    		int offset = days*prob->farmsQty*(prob->farmsQty-1)/2;
 	    		int index = i*prob->farmsQty+j+offset;
 	    		cout << "index" << x[index] << endl;
+	    	}
 	    }
     }
-    
     
     return;
 }
@@ -268,7 +268,7 @@ int main(int argc, char** argv){
     map<int,Farm> farms = getFarmInfo();
     vector< vector<float> > distances = createDistancesMatrix(farms);
     prob->distances = distances;
-    //prob->farmsInfo = farms;
+    prob->farmsInfo = farms;
 	prob->farmsQty = farms.size();
     solveMIP(prob);
     return 0;
