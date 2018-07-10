@@ -1,86 +1,65 @@
+#define Federico using
+#define Javier namespace
+#define Pousa std;
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <map>
-#include <fstream>
-#include <sstream>
-#include <math.h>
 #include <ilcplex/cplex.h>
 
-using namespace std;
 
 
+Federico Javier Pousa
+
+
+// Estructura para guardar los datos del problema y su solucion
 struct Problema{
-	vector< vector<float> > distances;
-	map<int,Farm> farmsInfo;
-	int farmsQty;
+	int N; //Cantidad de vertices
+	int M; //Cantidad de aristas
+	vector<vector<int> > ejes; //Grafo de conflictos como lista de adyacencias
+	vector<vector<int> > ady; //Grafo de conflictos como matriz de adyacencias
+	int bestObj; // Mejor valor de la funcion objetivo global
+	vector<int> colores; // Mejor solucion, tiene el color asignado a cada vertice
 	Problema(){}
 };
 
-
-struct Farm{
-    int east;
-    int north;
-    bool everyDay;
-    int toCollect;
-};
-
-bool getBooleanValue(string s) {
-    if (s == "true") {
-        return true;
-    }
-    return false;
-}
-
-int getIntValue(string s) {
-    return stoi(s);
-}
-
-float getDistances(Farm f1, Farm f2) {
-    return sqrt(pow(f1.east - f2.east,2) + pow(f1.north - f2.north,2));
-}
-
-map<int,Farm> getFarmInfo() {
-    ifstream file ( "Farms.csv" );
-    string line;
-    string value;
-
-    map<int, Farm> m;
-    while ( file.good() ){
-        getline( file, line, '\n' );
-        stringstream ss(line);
-
-        vector<string> farmValues;
-        while(getline( ss, value, ',' )){
-            farmValues.push_back(value);
-            cout << value << endl;    
+// Alguna heuristica inicial para tener una solucion factible razonable
+void secuencial(Problema * prob){
+    vector<int> nuevos(prob->N,-1);
+    nuevos[0] = 0;
+    vector<int> usados;
+    int maximo = 0;
+    for(int i=1;i<prob->N;i++){
+        usados.clear();
+        for(int j=0;j<(int)prob->ejes[i].size();j++){
+            if(prob->ejes[i][j]>i)break;
+            usados.push_back(nuevos[prob->ejes[i][j]]);
         }
-
-        Farm f;
-        f.east = getIntValue(farmValues[1]);
-        f.north = getIntValue(farmValues[2]);
-        f.everyDay = getBooleanValue(farmValues[3]);
-        
-        f.toCollect = getIntValue(farmValues[4]);
-
-        m[getIntValue(farmValues[0])-1] = f;
-    }
-
-    return m;
-}
-
-vector< vector<float> > createDistancesMatrix(map<int,Farm> farmData){
-    vector< vector<float> > distances(farmData.size(), vector<float> (farmData.size(), 0));
-    for (map<int,Farm>::iterator it=farmData.begin(); it!=farmData.end(); ++it){
-        for (map<int,Farm>::iterator it2=farmData.begin(); it!=farmData.end(); ++it){
-            distances[it->first][it2->first] = getDistances(it->second, it2->second);
+        sort(usados.begin(),usados.end());
+        int minimo = 0;
+        for(int j=0;j<(int)usados.size();j++){
+            if(usados[j]==minimo)minimo++;
         }
+        nuevos[i]=minimo;
+        maximo = max(maximo,minimo);
     }
     
-    return distances;
+    if(maximo<prob->bestObj){
+        prob->bestObj = maximo+1;
+        prob->colores = nuevos;
+    }
+    return;
+}
+
+void heuristicaInicial(Problema * prob){
+    secuencial(prob);
+    return;
 }
 
 
+// La siguiente funcion resuelve el problema de coloreo usando CPLEX para
+// resolver un modelo ILP.
+// El modelo tiene variables X_ik que indican si el item i tiene el color k
+// y variables Y_k que indican si el color k esta siendo usado.
 void solveMIP(Problema * prob){
     
     ////////////////////////////
@@ -94,7 +73,8 @@ void solveMIP(Problema * prob){
     int status;
     
     // Variable para indicar cuantas variables va a tener nuestro modelo
-    int cantvar = prob->farmsQty*(farmsQty-1);
+    // La cantidad de colores al definir el modelo esta dada por la mejor solucion que nos dio la heuristica inicial
+    int cantvar = prob->N*prob->bestObj+prob->bestObj;
     
     // Variables para definir las variables del modelo y la funcion objetivo
     double *obj=(double*)malloc(sizeof(double)*cantvar);
@@ -135,32 +115,118 @@ void solveMIP(Problema * prob){
     // Output
     status = CPXsetintparam(env, CPX_PARAM_SCRIND, CPX_ON);
     if(status)exit(-1);
-
-        
+    
+    //~ status = CPXsetintparam(env, CPX_PARAM_MIPDISPLAY, 5);
+    //~ if(status)exit(-1);
+    
+    //~ status = CPXsetintparam(env, CPX_PARAM_MIPINTERVAL, 1 );
+    //~ if(status)exit(-1);
+    /////////
+    
+    
     /////////
     // Presolve
     status = CPXsetintparam (env, CPX_PARAM_MIPCBREDLP, CPX_OFF);
     if(status)exit(-1);
     
-   
-   
+    //~ status = CPXsetintparam(env, CPX_PARAM_PRELINEAR, 0);
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_REDUCE, CPX_PREREDUCE_PRIMALONLY);
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_REPEATPRESOLVE, 0); 
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_PROBE, -1);
+    //~ if(status)exit(-1);
+    /////////
 
+    /////////
+    // CPLEX heuristics
+    //~ status = CPXsetintparam(env, CPX_PARAM_HEURFREQ, -1);
+    //~ if(status)exit(-1); 
+    
+    //~ status = CPXsetintparam(env, CPX_PARAM_RINSHEUR, -1);
+    //~ if(status)exit(-1);
+
+    //~ status = CPXsetintparam(env, CPX_PARAM_FPHEUR, -1);
+    //~ if(status)exit(-1);
+    
+    //~ status = CPXsetintparam(env, CPX_PARAM_LBHEUR, -1);
+    //~ if(status)exit(-1);
+    /////////
+    
+    
+    /////////
+    // CPLEX cuts
+    //~ status = CPXsetintparam(env, CPX_PARAM_CUTPASS, 100);
+    //~ if(status)exit(-1);
+    
+    //~ status = CPXsetintparam(env, CPX_PARAM_CLIQUES, -1 );
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_COVERS, -1 );
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_DISJCUTS, -1 );
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_FLOWCOVERS, -1 );
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_FLOWPATHS, -1 );
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_FRACCUTS, -1 );
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_GUBCOVERS, -1 );
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_MCFCUTS, -1 );
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_IMPLBD, -1 );
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_MIRCUTS, -1 );
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_ZEROHALFCUTS, -1 );
+    //~ if(status)exit(-1);
+    
+    /////////
+    
+    
+    
     /////////
     // Execution decisions
     
     status = CPXsetdblparam(env, CPX_PARAM_TILIM, 3600.0);
     if(status)exit(-1);
+    
+    //~ status = CPXsetintparam(env, CPX_PARAM_NODELIM, 1);
+    //~ if(status)exit(-1);
+    
+    //~ status = CPXsetintparam(env, CPX_PARAM_PARALLELMODE, 1);
+    //~ if(status)exit(-1);
 
     status = CPXsetintparam(env, CPX_PARAM_THREADS, 8);
     if(status)exit(-1);
 
+    //~ status = CPXsetintparam(env, CPX_PARAM_NODESEL, CPX_NODESEL_DFS);
     status = CPXsetintparam(env, CPX_PARAM_NODESEL, CPX_NODESEL_BESTBOUND);
     if(status)exit(-1);
+    
+    //~ status = CPXsetintparam(env, CPX_PARAM_MIPEMPHASIS, CPX_MIPEMPHASIS_OPTIMALITY);
+    //~ if(status)exit(-1);
+    
+    //~ status = CPXsetintparam(env, CPX_PARAM_STARTALG, CPX_ALG_PRIMAL); CHECKSTATUS;
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_BARCROSSALG, -1); CHECKSTATUS;
+    //~ if(status)exit(-1);
+    //~ status = CPXsetintparam(env, CPX_PARAM_LPMETHOD, CPX_ALG_DUAL ); CHECKSTATUS; 
+    //~ if(status)exit(-1);
+    
+    //~ status = CPXsetintparam(env, CPX_PARAM_VARSEL, CPX_VARSEL_MININFEAS); CHECKSTATUS; // 
+    //~ if(status)exit(-1);
+    
+    //~ status = CPXsetintparam(env, CPX_PARAM_MIPORDIND, CPX_ON); CHECKSTATUS;
+    //~ if(status)exit(-1);
     
     
     status = CPXsetintparam(env, CPX_PARAM_MIPSEARCH, CPX_MIPSEARCH_TRADITIONAL);
     if(status)exit(-1);
-   
+    /////////
+    
     
     
     // Para setear un archivo de log
@@ -169,9 +235,19 @@ void solveMIP(Problema * prob){
     //~ CPXsetlogfile (env, logfile);
     
     
-
+    ////////////////////////////////////////////////////////////////////
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     // Creamos el problema en si en CPLEX
-    lp = CPXcreateprob(env, &status, "milkCollection");
+    lp = CPXcreateprob(env, &status, "coloreo");
     if(lp==NULL)exit(-1);
     
     
@@ -332,13 +408,52 @@ void solveMIP(Problema * prob){
     return;
 }
 
-int main(int argc, char** argv){
-    Problema * prob = new Problema();
-    map<int,Farm> farms = getFarmInfo();
-    vector< vector<float> > distances = createDistancesMatrix(farms);
-    prob->distances = distances;
-    //prob->farmsInfo = farms;
-	prob->farmsQty = farms.size();
+
+
+void solve(Problema * prob){
+    heuristicaInicial(prob);
     solveMIP(prob);
+    return;
+}
+
+int main(int argc, char** argv){
+    // Pipeamos el archivo pasado por parametro a cin
+    freopen(argv[1],"r",stdin);
+    int aux1, aux2;
+    
+    
+    // Lectura del problema y armado de la estructura
+    Problema * prob = new Problema();
+    cin >> prob->N >> prob->M;
+    prob->bestObj = prob->N;
+    prob->colores = vector<int>(prob->N,0);
+    prob->ejes = vector<vector<int> >(prob->N,vector<int>(0));
+    for(int i=0;i<prob->N;i++)prob->colores[i] = i;
+    prob->ady = vector<vector<int> >(prob->N,vector<int>(prob->N,0));
+    for(int i=0;i<prob->M;i++){
+        cin >> aux1 >> aux2;
+        prob->ejes[aux1].push_back(aux2);
+        prob->ejes[aux2].push_back(aux1);
+        prob->ady[aux1][aux2] = 1;
+        prob->ady[aux2][aux1] = 1;
+    }
+    for(int i=0;i<prob->N;i++){
+        sort(prob->ejes[i].begin(),prob->ejes[i].end());
+    }
+    
+    
+    // Llamamos a nuestra funcion que resuelve el problema
+    solve(prob);
+    
+    
+    // Imprimimos la solucion
+    cout << prob->bestObj << endl;
+    for(int i=0;i<prob->N;i++){
+        cout << prob->colores[i] << " ";
+    }
+    cout << endl;
+    
+    
+    delete prob;
     return 0;
 }
