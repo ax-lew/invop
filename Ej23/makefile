@@ -5,7 +5,7 @@ LDFLAGS = -L$(CPLEXDIR)/lib/x86-64_linux/static_pic -lcplex -lpthread
 
 
 clean:
-	rm -f coloring
+	rm -f MilkCollection
 
 solve:
 	$(CCC) -o MilkCollection $(CFLAGS) MilkCollection.cpp $(LDFLAGS)
