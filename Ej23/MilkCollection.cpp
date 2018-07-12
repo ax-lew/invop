@@ -24,18 +24,48 @@ struct Problema{
 	Problema(){}
 };
 
-int getIndexFromEdge(int val, int val2, int length){
-	int from = min(val, val2);
-	int to = max(val, val2);
+// Returns which bits are on in the integer a                                                                                                                                                                                              
+vector<int> getOnLocations(int a) {
+  vector<int> result;
+  int place = 0;
+  while (a != 0) {
+    if (a & 1) {
+      result.push_back(place);
+    }
+    ++place;
+    a >>= 1;
+  }
+  return result;
+}
+
+
+vector<vector<int> > getPowerSet(const vector<int>& set) {
+  vector<vector<int> > result;
+  int numPowerSets = static_cast<int>(pow(2.0, static_cast<double>(set.size())));
+  for (size_t i = 0; i < numPowerSets; ++i) {
+    vector<int> onLocations = getOnLocations(i);
+    vector<int> subSet;
+    for (size_t j = 0; j < onLocations.size(); ++j) {
+      subSet.push_back(set.at(onLocations.at(j)));
+    }
+    result.push_back(subSet);
+  }
+  return result;
+}
+
+int getIndexFromEdge(int from, int to, int day, int length){
 	int count = 0;
 	for (int i = 0; i < length; i++){
-    	for(int j=i+1;j<length;j++){
-    		if (i == from && j == to){
-    			return count;
+    	for(int j=0; j<length; j++){
+    		if (i != j) {
+    			if (i == from && j == to){
+    				return count+day*length*(length-1);
+	    		}
+	    		count++;
     		}
-    		count++;
     	}
 	}
+	return -1;
 }
 
 bool getBooleanValue(string s) {
@@ -105,7 +135,7 @@ void solveMIP(Problema * prob){
     int status;
     
     // Variable para indicar cuantas variables va a tener nuestro modelo
-    int cantvar = prob->farmsQty*(prob->farmsQty-1);
+    int cantvar = prob->farmsQty*(prob->farmsQty-1)*2;
     
     // Variables para definir las variables del modelo y la funcion objetivo
     double *obj=(double*)malloc(sizeof(double)*cantvar);
@@ -191,17 +221,16 @@ void solveMIP(Problema * prob){
 
     // Definimos la variables del problema con su valor en la funcion objetivo, lower bound, upper bound y coltype que indica el tipo de variable
     // CPLEX maneja un arreglo de variables. Para esto consideramos las variables en el orden X_11, X_12, X_13, .... , X_21, X_22,..., XN1, .... , Y_1 , Y_2...
-    int count = 0;
     for (int days=0; days<2; days++){
     	for(int i=0;i<prob->farmsQty;i++){
-	    	for(int j=i+1;j<prob->farmsQty;j++){
-	    		//int offset = days*prob->farmsQty*(prob->farmsQty-1)/2;
-	    		//int index = i*prob->farmsQty+j+offset;
-	    		obj[count] = prob->distances[i][j];
-	    		lb[count] = 0.;
-		        ub[count] = 1.;
-		        coltype[count] = 'B';
-		        count++;
+	    	for(int j=0;j<prob->farmsQty;j++){
+	    		if (i != j) {
+	    			int index = getIndexFromEdge(i,j,days,prob->farmsQty);
+	    			obj[index] = prob->distances[i][j];
+		    		lb[index] = 0.;
+			        ub[index] = 1.;
+			        coltype[index] = 'B';
+	    		}
 	    	}
 	    }
     }
@@ -215,48 +244,167 @@ void solveMIP(Problema * prob){
     
     ////////////////////////////
     // Una vez armadas todas las variables  y la funcion objetivo, faltan las restricciones
-    count = 0;
+    
+    // capacidad maxima
     for (int days=0; days<2; days++){
-    	int index = 0;
+    	int count = 0;
 	    rmatbeg[0] = 0;
         rhs[0] = 80000.0;
         sense[0] = 'L';
 	    for(int i=0;i<prob->farmsQty;i++){
-	    	for(int j=i+1;j<prob->farmsQty;j++){
-	    		rmatval[index] = prob->farmsInfo[i].toCollect;
-	    		rmatind[index] = count;
-	    		count++;
-	    		index++;
+	    	for(int j=0;j<prob->farmsQty;j++){
+	    		if(i!=j){
+	    			int index = getIndexFromEdge(i,j,days,prob->farmsQty);
+		    		rmatval[count] = prob->farmsInfo[i].toCollect;
+		    		rmatind[count] = index;
+		    		count++;
+	    		}
 	    	}
 	    }
 
-	    status = CPXaddrows(env, lp, 0, 1, index, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+	    status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
         if(status)exit(-1);
     }
-
-
-    
-    for(int i=0;i<prob->farmsQty;i++){
-    	count = 0;
-	    rmatbeg[0] = 0;
-        sense[0] = 'E';
-    	if (prob->farmsInfo[i].everyDay){
-    		rhs[0] = 2;
-    	} else {
-    		rhs[0] = 1;
-    	}
-    	for(int j=0;j<prob->farmsQty;j++){
-    		int index = getIndexFromEdge(i,j, prob->farmsQty);
-    		rmatval[count] = 1.0;
-    		rmatind[count] = index;
-    		count++;
+	
+    /// every day - salen de una granja
+    for (int days=0; days<2; days++){
+		for(int i=0;i<prob->farmsQty;i++){
+			if (!prob->farmsInfo[i].everyDay) {
+				continue;
+			}
+			int count = 0;
+		    rmatbeg[0] = 0;
+		    sense[0] = 'E';
+			rhs[0] = 1;
+			for(int j=0;j<prob->farmsQty;j++){
+				if (i!=j){
+					int index = getIndexFromEdge(i,j, days, prob->farmsQty);
+		    		rmatval[count] = 1.0;
+		    		rmatind[count] = index;
+		    		count++;
+				}
+			}
+			status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+			if(status)exit(-1);	
 		}
-    	status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
-    	if(status)exit(-1);	
-    }
+	}
 
+	// someday - salen de una granja
+	for(int i=0;i<prob->farmsQty;i++){
+		if (prob->farmsInfo[i].everyDay) {
+			continue;
+		}
+		int count = 0;
+	    rmatbeg[0] = 0;
+	    sense[0] = 'E';
+		rhs[0] = 1;
+		for(int j=0;j<prob->farmsQty;j++){
+			if (i!=j){
+				int index = getIndexFromEdge(i,j, 0, prob->farmsQty);
+				int indexDay2 = getIndexFromEdge(i,j, 1, prob->farmsQty);
+	    		rmatval[count] = 1.0;
+	    		rmatind[count] = index;
+	    		count++;
+	    		rmatval[count] = 1.0;
+	    		rmatind[count] = indexDay2;
+	    		count++;
+			}
+		}
+		status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+		if(status)exit(-1);	
+	}
     
-    
+
+	/// every day - entran una granja
+    for (int days=0; days<2; days++){
+		for(int j=0;j<prob->farmsQty;j++){
+			if (!prob->farmsInfo[j].everyDay) {
+				continue;
+			}
+			int count = 0;
+		    rmatbeg[0] = 0;
+		    sense[0] = 'E';
+			rhs[0] = 1;
+			for(int i=0;i<prob->farmsQty;i++){
+				if (i!=j){
+					int index = getIndexFromEdge(i,j, days, prob->farmsQty);
+		    		rmatval[count] = 1.0;
+		    		rmatind[count] = index;
+		    		count++;
+				}
+			}
+			status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+			if(status)exit(-1);	
+		}
+	}
+
+	// someday - entran de una granja
+	for(int j=0;j<prob->farmsQty;j++){
+		if (prob->farmsInfo[j].everyDay) {
+			continue;
+		}
+		int count = 0;
+	    rmatbeg[0] = 0;
+	    sense[0] = 'E';
+		rhs[0] = 1;
+		for(int i=0;i<prob->farmsQty;i++){
+			if (i!=j){
+				int index = getIndexFromEdge(i,j, 0, prob->farmsQty);
+				int indexDay2 = getIndexFromEdge(i,j, 1, prob->farmsQty);
+	    		rmatval[count] = 1.0;
+	    		rmatind[count] = index;
+	    		count++;
+	    		rmatval[count] = 1.0;
+	    		rmatind[count] = indexDay2;
+	    		count++;
+			}
+		}
+		status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+		if(status)exit(-1);	
+	}
+
+	// subtour
+	vector<int> farms;
+	for (int i = 0; i < prob->farmsQty; i++){
+		farms.push_back(i);
+	}
+
+	vector< vector<int> > powerSet = getPowerSet(farms);
+	for (int days=0; days<2; days++){
+		for(int s = 0; s<powerSet.size(); s++){
+			if(powerSet[s].size() == 0){
+				continue;
+			}
+			for (int i = 0; i < farms.size(); ++i)
+				{
+					cout << powerSet[s][i] << endl;
+					
+				}
+				cout << "list" << endl;
+			int count = 0;
+		    rmatbeg[0] = 0;
+	        rhs[0] = powerSet[s].size()-1;
+	        sense[0] = 'L';
+		    for(int i=0;i<powerSet.size();i++){
+		    	for(int j=0;j<powerSet.size();j++){
+		    		int from = powerSet[s][i];
+		    		int to = powerSet[s][j];
+		    		cout << from << endl;
+		    		cout << to << endl;
+		    		cout << endl;
+		    		if(from!=to){
+		    			int index = getIndexFromEdge(from,to,days,prob->farmsQty);
+			    		rmatval[count] = 1.0;
+			    		rmatind[count] = index;
+			    		count++;
+		    		}
+		    	}
+		    }
+		    status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+        	if(status)exit(-1);
+		}
+	}
+
     /////////////////////////////
     // Una vez armado todo, se hace la siguiente llamada para darle el control a CPLEX y que resuelva todo el modelo
     status = CPXmipopt(env,lp);
@@ -284,11 +432,16 @@ void solveMIP(Problema * prob){
     cout << "objval" << objval << endl;
 
     for (int days=0; days<2; days++){
+    	cout << "dia " << days << endl;
     	for(int i=0;i<prob->farmsQty;i++){
-	    	for(int j=i+1;j<prob->farmsQty;j++){
-	    		int offset = days*prob->farmsQty*(prob->farmsQty-1)/2;
-	    		int index = i*prob->farmsQty+j+offset;
-	    		cout << "index" << x[index] << endl;
+	    	for(int j=0;j<prob->farmsQty;j++){
+	    		if (i != j){
+	    			int index = getIndexFromEdge(i,j,days,prob->farmsQty);
+	    			if (x[index]) {
+	    				cout << "(" << i << "," << j << ")" << endl;
+	    			}
+	    			
+	    		}	    		
 	    	}
 	    }
     }
