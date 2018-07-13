@@ -24,34 +24,30 @@ struct Problema{
 	Problema(){}
 };
 
-// Returns which bits are on in the integer a                                                                                                                                                                                              
-vector<int> getOnLocations(int a) {
-  vector<int> result;
-  int place = 0;
-  while (a != 0) {
-    if (a & 1) {
-      result.push_back(place);
+vector< vector<int> > getPowerSet(int *set, int set_size)
+{
+    /*set_size of power set of a set with set_size
+      n is (2**n -1)*/
+    unsigned int pow_set_size = pow(2, set_size);
+    int counter, j;
+ 
+    /*Run from counter 000..0 to 111..1*/
+    vector< vector<int> > power_set;
+    for(counter = 0; counter < pow_set_size; counter++)
+    {
+    	vector<int> s;
+      for(j = 0; j < set_size; j++)
+       {
+          /* Check if jth bit in the counter is set
+             If set then pront jth element from set */
+          if(counter & (1<<j))
+          	s.push_back(set[j]);
+       }
+       power_set.push_back(s);
     }
-    ++place;
-    a >>= 1;
-  }
-  return result;
+    return power_set;
 }
-
-
-vector<vector<int> > getPowerSet(const vector<int>& set) {
-  vector<vector<int> > result;
-  int numPowerSets = static_cast<int>(pow(2.0, static_cast<double>(set.size())));
-  for (size_t i = 0; i < numPowerSets; ++i) {
-    vector<int> onLocations = getOnLocations(i);
-    vector<int> subSet;
-    for (size_t j = 0; j < onLocations.size(); ++j) {
-      subSet.push_back(set.at(onLocations.at(j)));
-    }
-    result.push_back(subSet);
-  }
-  return result;
-}
+ 
 
 int getIndexFromEdge(int from, int to, int day, int length){
 	int count = 0;
@@ -289,32 +285,6 @@ void solveMIP(Problema * prob){
 		}
 	}
 
-	// someday - salen de una granja
-	for(int i=0;i<prob->farmsQty;i++){
-		if (prob->farmsInfo[i].everyDay) {
-			continue;
-		}
-		int count = 0;
-	    rmatbeg[0] = 0;
-	    sense[0] = 'E';
-		rhs[0] = 1;
-		for(int j=0;j<prob->farmsQty;j++){
-			if (i!=j){
-				int index = getIndexFromEdge(i,j, 0, prob->farmsQty);
-				int indexDay2 = getIndexFromEdge(i,j, 1, prob->farmsQty);
-	    		rmatval[count] = 1.0;
-	    		rmatind[count] = index;
-	    		count++;
-	    		rmatval[count] = 1.0;
-	    		rmatind[count] = indexDay2;
-	    		count++;
-			}
-		}
-		status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
-		if(status)exit(-1);	
-	}
-    
-
 	/// every day - entran una granja
     for (int days=0; days<2; days++){
 		for(int j=0;j<prob->farmsQty;j++){
@@ -337,7 +307,33 @@ void solveMIP(Problema * prob){
 			if(status)exit(-1);	
 		}
 	}
-
+/*
+	// someday - salen de una granja
+	for(int i=0;i<prob->farmsQty;i++){
+		if (prob->farmsInfo[i].everyDay) {
+			continue;
+		}
+		int count = 0;
+	    rmatbeg[0] = 0;
+	    sense[0] = 'E';
+		rhs[0] = 1;
+		for(int j=0;j<prob->farmsQty;j++){
+			if (i!=j){
+				int index = getIndexFromEdge(i,j, 0, prob->farmsQty);
+				int indexDay2 = getIndexFromEdge(i,j, 1, prob->farmsQty);
+	    		rmatval[count] = 1;
+	    		rmatind[count] = index;
+	    		count++;
+	    		rmatval[count] = 1;
+	    		rmatind[count] = indexDay2;
+	    		count++;
+			}
+		}
+		status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+		if(status)exit(-1);	
+	}
+    */
+/*
 	// someday - entran de una granja
 	for(int j=0;j<prob->farmsQty;j++){
 		if (prob->farmsInfo[j].everyDay) {
@@ -362,47 +358,45 @@ void solveMIP(Problema * prob){
 		status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
 		if(status)exit(-1);	
 	}
-
+*/
 	// subtour
-	vector<int> farms;
+	int farms[prob->farmsQty];
 	for (int i = 0; i < prob->farmsQty; i++){
-		farms.push_back(i);
+		farms[i] = i;
 	}
 
-	vector< vector<int> > powerSet = getPowerSet(farms);
+
+	vector< vector<int> > powerSet = getPowerSet(farms, prob->farmsQty);
+
 	for (int days=0; days<2; days++){
 		for(int s = 0; s<powerSet.size(); s++){
-			if(powerSet[s].size() == 0){
+			if(powerSet[s].size() <= 1 || powerSet[s].size() == prob->farmsQty){
 				continue;
 			}
-			for (int i = 0; i < farms.size(); ++i)
-				{
-					cout << powerSet[s][i] << endl;
-					
-				}
-				cout << "list" << endl;
 			int count = 0;
 		    rmatbeg[0] = 0;
 	        rhs[0] = powerSet[s].size()-1;
 	        sense[0] = 'L';
-		    for(int i=0;i<powerSet.size();i++){
-		    	for(int j=0;j<powerSet.size();j++){
+		    for(int i=0;i<powerSet[s].size();i++){
+		    	for(int j=0;j<powerSet[s].size();j++){
 		    		int from = powerSet[s][i];
 		    		int to = powerSet[s][j];
-		    		cout << from << endl;
-		    		cout << to << endl;
-		    		cout << endl;
 		    		if(from!=to){
 		    			int index = getIndexFromEdge(from,to,days,prob->farmsQty);
 			    		rmatval[count] = 1.0;
 			    		rmatind[count] = index;
 			    		count++;
+			    		cout << from << "-" << to << "+";
+			    		
 		    		}
 		    	}
 		    }
 		    status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
         	if(status)exit(-1);
+
+        	cout << "<=" << powerSet[s].size()-1 << endl;
 		}
+
 	}
 
     /////////////////////////////
