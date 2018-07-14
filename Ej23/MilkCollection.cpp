@@ -80,7 +80,7 @@ float getDistances(Farm f1, Farm f2) {
 }
 
 map<int,Farm> getFarmInfo() {
-    ifstream file ( "SmallFarms.csv" );
+    ifstream file ( "Farms.csv" );
     string line;
     string value;
 
@@ -131,7 +131,7 @@ void solveMIP(Problema * prob){
     int status;
     
     // Variable para indicar cuantas variables va a tener nuestro modelo
-    int cantvar = prob->farmsQty*(prob->farmsQty-1)*2;
+    int cantvar = prob->farmsQty*(prob->farmsQty-1)*2+prob->farmsQty;
     
     // Variables para definir las variables del modelo y la funcion objetivo
     double *obj=(double*)malloc(sizeof(double)*cantvar);
@@ -231,8 +231,13 @@ void solveMIP(Problema * prob){
 	    }
     }
 
- 
-    
+    for(int j=0;j<prob->farmsQty;j++){
+        int index = prob->farmsQty*(prob->farmsQty-1)*2+j;
+        obj[index] = 0;
+        lb[index] = 0.;
+        ub[index] = 1.;
+        coltype[index] = 'B';
+    }
     // Con esta llamada se crean todas las columnas de nuestro problema
     status = CPXnewcols(env, lp, cantvar, obj, lb, ub, coltype, NULL);
     if(status)exit(-1);
@@ -307,7 +312,7 @@ void solveMIP(Problema * prob){
 			if(status)exit(-1);	
 		}
 	}
-/*
+
 	// someday - salen de una granja
 	for(int i=0;i<prob->farmsQty;i++){
 		if (prob->farmsInfo[i].everyDay) {
@@ -332,8 +337,8 @@ void solveMIP(Problema * prob){
 		status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
 		if(status)exit(-1);	
 	}
-    */
-/*
+    
+
 	// someday - entran de una granja
 	for(int j=0;j<prob->farmsQty;j++){
 		if (prob->farmsInfo[j].everyDay) {
@@ -358,8 +363,105 @@ void solveMIP(Problema * prob){
 		status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
 		if(status)exit(-1);	
 	}
-*/
+
+    // si sale en dia 1, tambien entra en e dia 1
+    
+    for(int i=0;i<prob->farmsQty;i++){
+        if (prob->farmsInfo[i].everyDay) {
+            continue;
+        }
+        int count = 0;
+        rmatbeg[0] = 0;
+        sense[0] = 'G';
+        rhs[0] = 1;
+        for(int j=0;j<prob->farmsQty;j++){
+            if (i!=j){
+                int index = getIndexFromEdge(j,i, 0, prob->farmsQty);
+                rmatval[count] = 1;
+                rmatind[count] = index;
+                count++;
+            }
+        }
+        rmatval[count] = 99999999;
+        rmatind[count] = prob->farmsQty*(prob->farmsQty-1)*2+i;
+        count++;
+        status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+        if(status)exit(-1); 
+    }
+    
+    for(int i=0;i<prob->farmsQty;i++){
+        if (prob->farmsInfo[i].everyDay) {
+            continue;
+        }
+        int count = 0;
+        rmatbeg[0] = 0;
+        sense[0] = 'G';
+        rhs[0] = -99999999;
+        for(int j=0;j<prob->farmsQty;j++){
+            if (i!=j){
+                int index = getIndexFromEdge(i,j, 1, prob->farmsQty);
+                rmatval[count] = -1;
+                rmatind[count] = index;
+                count++;
+            }
+        }
+        rmatval[count] = -99999999;
+        rmatind[count] = prob->farmsQty*(prob->farmsQty-1)*2+i;
+        count++;
+        status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+        if(status)exit(-1); 
+    }
+    
+// la vuelta
+    for(int i=0;i<prob->farmsQty;i++){
+        if (prob->farmsInfo[i].everyDay) {
+            continue;
+        }
+        int count = 0;
+        rmatbeg[0] = 0;
+        sense[0] = 'G';
+        rhs[0] = 1;
+        for(int j=0;j<prob->farmsQty;j++){
+            if (i!=j){
+                int index = getIndexFromEdge(i,j, 0, prob->farmsQty);
+                rmatval[count] = 1;
+                rmatind[count] = index;
+                count++;
+            }
+        }
+        rmatval[count] = 99999999;
+        rmatind[count] = prob->farmsQty*(prob->farmsQty-1)*2+i;
+        count++;
+        status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+        if(status)exit(-1); 
+    }
+    
+    for(int i=0;i<prob->farmsQty;i++){
+        if (prob->farmsInfo[i].everyDay) {
+            continue;
+        }
+        int count = 0;
+        rmatbeg[0] = 0;
+        sense[0] = 'G';
+        rhs[0] = -99999999;
+        for(int j=0;j<prob->farmsQty;j++){
+            if (i!=j){
+                int index = getIndexFromEdge(j,i, 1, prob->farmsQty);
+                rmatval[count] = -1;
+                rmatind[count] = index;
+                count++;
+            }
+        }
+        rmatval[count] = -99999999;
+        rmatind[count] = prob->farmsQty*(prob->farmsQty-1)*2+i;
+        count++;
+        status = CPXaddrows(env, lp, 0, 1, count, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+        if(status)exit(-1); 
+    }
+    
+
 	// subtour
+    /*
 	int farms[prob->farmsQty];
 	for (int i = 0; i < prob->farmsQty; i++){
 		farms[i] = i;
@@ -398,6 +500,57 @@ void solveMIP(Problema * prob){
 		}
 
 	}
+    */
+    // subtour simple
+    // no hay ciclos de tamaño 2
+    for (int days=0; days<2; days++){
+        for(int i=0;i<prob->farmsQty;i++){
+            for(int j=0;j<prob->farmsQty;j++){
+                if (i != j) {
+                    int index = getIndexFromEdge(i,j,days,prob->farmsQty);
+                    int index2 = getIndexFromEdge(j,i,days,prob->farmsQty);
+                    rmatval[0] = 1.0;
+                    rmatind[0] = index;
+                    rmatval[1] = 1.0;
+                    rmatind[1] = index2;
+                    
+                    rmatbeg[0] = 0;
+                    rhs[0] = 1;
+                    sense[0] = 'L';
+
+                    status = CPXaddrows(env, lp, 0, 1, 2, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+                    if(status)exit(-1);
+                }
+            }
+        }
+    }
+    // no hay ciclos de tamaño 3
+    for (int days=0; days<2; days++){
+        for(int i=0;i<prob->farmsQty;i++){
+            for(int j=0;j<prob->farmsQty;j++){
+                for(int h=0;h<prob->farmsQty;h++){
+                    if (i != j && i != h && j != h) {
+                        int index = getIndexFromEdge(i,j,days,prob->farmsQty);
+                        int index2 = getIndexFromEdge(j,h,days,prob->farmsQty);
+                        int index3 = getIndexFromEdge(h,i,days,prob->farmsQty);
+                        rmatval[0] = 1.0;
+                        rmatind[0] = index;
+                        rmatval[1] = 1.0;
+                        rmatind[1] = index2;
+                        rmatval[2] = 1.0;
+                        rmatind[2] = index3;
+                        
+                        rmatbeg[0] = 0;
+                        rhs[0] = 2;
+                        sense[0] = 'L';
+
+                        status = CPXaddrows(env, lp, 0, 1, 3, rhs, sense, rmatbeg, rmatind, rmatval, NULL, NULL);
+                        if(status)exit(-1);
+                    }
+                }
+            }
+        }
+    }
 
     /////////////////////////////
     // Una vez armado todo, se hace la siguiente llamada para darle el control a CPLEX y que resuelva todo el modelo
