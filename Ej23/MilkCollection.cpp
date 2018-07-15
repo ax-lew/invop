@@ -250,7 +250,7 @@ void solveMIP(Problema * prob){
     for (int days=0; days<2; days++){
     	int count = 0;
 	    rmatbeg[0] = 0;
-        rhs[0] = 80000.0;
+        rhs[0] = 80.0;
         sense[0] = 'L';
 	    for(int i=0;i<prob->farmsQty;i++){
 	    	for(int j=0;j<prob->farmsQty;j++){
@@ -399,7 +399,7 @@ void solveMIP(Problema * prob){
         rhs[0] = -99999999;
         for(int j=0;j<prob->farmsQty;j++){
             if (i!=j){
-                int index = getIndexFromEdge(i,j, 1, prob->farmsQty);
+                int index = getIndexFromEdge(i,j, 0, prob->farmsQty);
                 rmatval[count] = -1;
                 rmatind[count] = index;
                 count++;
@@ -412,7 +412,7 @@ void solveMIP(Problema * prob){
         if(status)exit(-1); 
     }
     
-// la vuelta
+    // la vuelta
     for(int i=0;i<prob->farmsQty;i++){
         if (prob->farmsInfo[i].everyDay) {
             continue;
@@ -446,7 +446,7 @@ void solveMIP(Problema * prob){
         rhs[0] = -99999999;
         for(int j=0;j<prob->farmsQty;j++){
             if (i!=j){
-                int index = getIndexFromEdge(j,i, 1, prob->farmsQty);
+                int index = getIndexFromEdge(j,i, 0, prob->farmsQty);
                 rmatval[count] = -1;
                 rmatind[count] = index;
                 count++;
