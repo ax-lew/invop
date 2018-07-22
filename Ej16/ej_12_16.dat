@@ -1,0 +1,19 @@
+NGeneratorTypes = 3;
+NGTWTypes = 2;
+
+NHoras = 24;
+Demand = [15000, 15000, 15000, 15000, 15000, 15000, 30000, 30000, 30000, 25000, 25000, 25000, 25000, 25000, 25000, 40000, 40000, 40000, 27000, 27000, 27000, 27000, 27000, 27000];
+
+AmountGeneratorsPerType = [12, 10, 2, 1, 1];
+MinimumLevel = [850, 1250, 1500];
+MaximumLevel = [2000, 1750, 4000];
+CostPerHourAtMin = [1000, 2600, 3000];
+CostPerHourPerExtra = [2, 1.30, 3];
+StartUpCost = [2000, 1000, 500];
+
+ConstantCost = [90, 150];
+ConstantMW = [900, 1400];
+DepthCost = [0.31, 0.47];
+RStartUpCost = [1500, 1200];
+MWPerMeterLoaded = 3000;
+	
