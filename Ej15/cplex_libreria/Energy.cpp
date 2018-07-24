@@ -6,6 +6,7 @@
 #include <sstream>
 #include <math.h>
 #include <ilcplex/cplex.h>
+#include <ctime>
 
 using namespace std;
 
@@ -113,7 +114,7 @@ float GetFuncObjCoefForVariable(Problem * prob, int id_generator, int hour, int 
     return objFuncCoef;
 }
 
-void solveMIP(Problem * prob){
+void solveMIP(Problem * prob, int available_cuts){
     ////////////////////////////
     //Vars
     
@@ -157,10 +158,10 @@ void solveMIP(Problem * prob){
     
     /////////
     // Execution decisions
-    status = CPXsetdblparam(env, CPX_PARAM_TILIM, 3600.0);
+    status = CPXsetdblparam(env, CPX_PARAM_TILIM, 1800.0);
     if(status)exit(-1);
 
-    status = CPXsetintparam(env, CPX_PARAM_THREADS, 8);
+    status = CPXsetintparam(env, CPX_PARAM_THREADS, 1);
     if(status)exit(-1);
 
     status = CPXsetintparam(env, CPX_PARAM_NODESEL, CPX_NODESEL_BESTBOUND);
@@ -170,20 +171,25 @@ void solveMIP(Problem * prob){
     status = CPXsetintparam(env, CPX_PARAM_MIPSEARCH, CPX_MIPSEARCH_TRADITIONAL);
     if(status)exit(-1);
    
-    // Para setear un archivo de log
-    //~ CPXFILEptr logfile = NULL;
-   	//~ logfile = CPXfopen ("BPGC.log", "a");
-    //~ CPXsetlogfile (env, logfile);
+    /////////
+    // CPLEX cuts
+    vector<int> cuts_types = {CPX_PARAM_CUTPASS, CPX_PARAM_CLIQUES, CPX_PARAM_COVERS, CPX_PARAM_DISJCUTS, CPX_PARAM_FLOWCOVERS, CPX_PARAM_FLOWPATHS, CPX_PARAM_FRACCUTS, CPX_PARAM_GUBCOVERS, CPX_PARAM_MCFCUTS, CPX_PARAM_IMPLBD, CPX_PARAM_MIRCUTS, CPX_PARAM_ZEROHALFCUTS};
 
-    // Creamos el problema en si en CPLEX
+    for(int i = 0; i < cuts_types.size(); i++){
+        int cuts_amount = -1;
+        if( (available_cuts & (1<<i)) != 0 ){
+            cuts_amount = 1;
+        }
+        status = CPXsetintparam(env, cuts_types[i], cuts_amount);
+        if(status)exit(-1);
+    }
+    /////////
+
     lp = CPXcreateprob(env, &status, "energy");
     if(lp==NULL)exit(-1);
     
-    // Definimos la funcion objetivo como una minimizacion
     CPXchgobjsen(env, lp, CPX_MIN);
 
-    // Definimos la variables del problema con su valor en la funcion objetivo, lower bound, upper bound y coltype que indica el tipo de variable
-    // CPLEX maneja un arreglo de variables. Para esto consideramos las variables en el orden X_11, X_12, X_13, .... , X_21, X_22,..., XN1, .... , Y_1 , Y_2...
     for (int generator=0; generator< prob->generators.size(); generator++){
        for(int hour=0; hour < prob->demands_per_hour.size(); hour++){
 			int index = GetIndexForVariable(prob, generator, hour, ExtraMW_offset);
@@ -206,13 +212,10 @@ void solveMIP(Problem * prob){
         }    
     }
 
-
-    // Con esta llamada se crean todas las columnas de nuestro problema
     status = CPXnewcols(env, lp, cantvar, obj, lb, ub, coltype, NULL);
     if(status)exit(-1);
 
     /* Constrains */
-
     // Demand is satisfied in each hour
     for(int hour = 0; hour < prob->demands_per_hour.size(); hour++){
         int count = 0;
@@ -374,31 +377,22 @@ void solveMIP(Problem * prob){
     // }
 
 
-    /////////////////////////////
-    // Una vez armado todo, se hace la siguiente llamada para darle el control a CPLEX y que resuelva todo el modelo
     status = CPXmipopt(env,lp);
     if(status)exit(-1);
-    /////////////////////////////
-    cout << "resuelto" << endl;
-    
-    status = CPXgetobjval (env, lp, &objval); // Para traer el mejor valor obtenido
+
+    status = CPXgetobjval (env, lp, &objval);
     if(status)exit(-1);
-    cout << "valores" << endl;
     
-    // Pido memoria para traer la solucion
     int cur_numrows = CPXgetnumrows(env,lp);
     int cur_numcols = CPXgetnumcols(env,lp);
     x = (double *) malloc(cur_numcols * sizeof(double));
     
     
-    // Pedimos los valores de las variables en la solucion
     status = CPXgetx (env, lp, x, 0, cur_numcols-1);
     if(status)exit(-1);
-    cout << "variables" << endl;
     
-    // Armamos la asignacion de colores en nuestra estructura con la informacion que nos trajimos de CPLEX
-    cout << "objval" << objval << endl;
-
+    //cout << "objval " << objval << endl;
+    /*
     for (int hour=0; hour < prob->demands_per_hour.size(); hour++){
         cout << "Hour "<< hour << ": ";
         float acumMW = 0;
@@ -415,17 +409,60 @@ void solveMIP(Problem * prob){
             }
         }
         cout << "\n" << "TotalMW: "<< acumMW << "\n";
-    }
+    }*/
     
     return;
 }
 
 
+int main(){
+    int amount_inputs, repeats;
+    cin >> amount_inputs >> repeats;
 
+    //read all the inputs
+    vector<Problem *> problems = vector<Problem *>();
+    for(int input = 0; input < amount_inputs; input++){
+        Problem * prob = new Problem();
+        fillProblem(prob);
+        problems.push_back(prob);
+    }
+
+    clock_t t1,t2;
+    
+    //code goes here
+    
+    float diff ((float)t2-(float)t1);
+    for(int available_cuts = 0; available_cuts < 4097; available_cuts++){
+        for(int input = 0; input < problems.size(); input++){
+            vector<float> times = vector<float>();
+            for(int i = 0; i < repeats; i++){
+                t1=clock();
+                solveMIP(problems[input], available_cuts);
+                t2=clock();
+                times.push_back(((float)t2-(float)t1) / float(CLOCKS_PER_SEC));
+            }
+            double res = 0;
+            for(auto time : times){
+                res += double(time);
+            }
+            res /= times.size();
+            cerr << double(res) << ",";
+        }
+        cerr << "\n";
+    }
+
+    // free memory
+    for(int input = 0; input < problems.size(); input++){
+        delete(problems[input]);
+    }
+    return 0;
+}
+/*
 int main(int argc, char** argv){
     Problem * prob = new Problem();
     fillProblem(prob);
     //printProblem(prob);
-    solveMIP(prob);
+    solveMIP(prob, (1<<13)-1);
     return 0;
 }
+*/
