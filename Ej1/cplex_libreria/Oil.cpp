@@ -635,8 +635,13 @@ int main(int argc, char** argv){
 
     for(int i = 0; i < inputs.size(); i++){
         times = vector<float>();
-        for(int bit = 0; bit < 4;bit ++){
-            heuristics_bit_mask = (1<<bit);
+        for(int bit = -1; bit < 4;bit ++){
+            if(bit < 0) {
+                heuristics_bit_mask = 0;
+            }
+            else {
+                heuristics_bit_mask = (1<<bit);
+            }
             for(int r = 0; r < repeats; r++){
                 cout << endl << "[EXPERIMENT-INFO] Input " << i << " Repeat " << r << " heuristics_bit_mask " << heuristics_bit_mask << "\n" << endl;
                 float solving_time = Solve(inputs[i]);
