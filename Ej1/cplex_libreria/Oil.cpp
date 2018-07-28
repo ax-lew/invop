@@ -242,33 +242,31 @@ void print_result(Problem &problem, double *x, double objval, ostream &out){
 
 float Solve(Problem &problem){
     float time_solver;
-    try{
 
-    clock_t t1,t2;
+    double *obj=nullptr,*lb=nullptr,*ub=nullptr,*rmatval=nullptr,*rhs=nullptr,*x=nullptr;
+    char *coltype=nullptr, *sense=nullptr;
+    int *rmatbeg=nullptr, *rmatind=nullptr;
     CPXENVptr env = NULL;
     CPXLPptr lp = NULL;
+
+    try{
+    clock_t t1,t2;
 
 #pragma region YOU_DONT_WANT_TO_SEE_THIS    
     int months = problem.prices.size(), oils = problem.hardness.size(); 
     int cantvar = months*oils*3;
 
-    double *obj=(double*)malloc(sizeof(double)*cantvar);
-    double *lb=(double*)malloc(sizeof(double)*cantvar);
-    double *ub=(double*)malloc(sizeof(double)*cantvar);
-    char *coltype=(char*)malloc(sizeof(char)*cantvar);
+    obj=(double*)malloc(sizeof(double)*cantvar);
+    lb=(double*)malloc(sizeof(double)*cantvar);
+    ub=(double*)malloc(sizeof(double)*cantvar);
+    coltype=(char*)malloc(sizeof(char)*cantvar);
     
-    int *rmatbeg=(int*)malloc(sizeof(int));
-    int *rmatind=(int*)malloc(sizeof(int)*cantvar);
-    double *rmatval=(double*)malloc(sizeof(double)*cantvar);
-    double *rhs=(double*)malloc(sizeof(double)*1);
-    char *sense=(char*)malloc(sizeof(char)*1);
-    
+    rmatbeg=(int*)malloc(sizeof(int));
+    rmatind=(int*)malloc(sizeof(int)*cantvar);
+    rmatval=(double*)malloc(sizeof(double)*cantvar);
+    rhs=(double*)malloc(sizeof(double)*1);
+    sense=(char*)malloc(sizeof(char)*1);
     double objval;
-    double *x = NULL;
-    double *y = NULL;
-    double *pi = NULL;
-    double *slack = NULL;
-    double *dj = NULL;
 
 
     env = CPXopenCPLEX(&status);
@@ -508,12 +506,26 @@ float Solve(Problem &problem){
     if(status)exit(-1);
     
     print_result(problem, x, objval, cout);
+    delete x;
 #endif
     }
     catch(int e){
         time_solver = -1;
+        if(x != nullptr) delete x;
     }
 
+    if(obj != nullptr) delete obj;
+    if(lb != nullptr) delete lb;
+    if(ub != nullptr) delete ub;
+    if(coltype != nullptr) delete coltype;
+    if(rmatbeg != nullptr) delete rmatbeg;
+    if(rmatind != nullptr) delete rmatind;
+    if(rmatval != nullptr) delete rmatval;
+    if(rhs != nullptr) delete rhs;
+    if(sense != nullptr) delete sense;
+    if(lp != nullptr) CPXfreeprob(env, &lp);
+    if(env != nullptr) CPXcloseCPLEX(&env);
+    
     return time_solver;
 }
 
@@ -550,8 +562,24 @@ int main(int argc, char** argv){
         load_input_from_istream(inputs.back(), cin);
     }
 
-    vector<float> times = vector<float>();
-    
+    vector<float> times;
+
+#ifdef normal
+    for(int i = 0; i < inputs.size(); i++){
+        times = vector<float>();
+        for(int r = 0; r < repeats; r++){
+            float solving_time = Solve(inputs[i]);
+            if (solving_time < 0){
+                cerr << "Input " << i << " Repeat " << r << " cut_pass " << cut_pass << " cut_bit_mask " << cut_bit_mask << " Ups!" << endl;
+            }
+            else{
+                times.push_back(solving_time);
+            }
+        }
+        cout << prune(times) << endl;
+    }
+#endif
+
 #ifdef cuts_experiments
     ofstream output;
     output.open ("cuts_results.csv");
@@ -559,6 +587,7 @@ int main(int argc, char** argv){
     vector<int> possible_cut_pass = {-1, 0, 100};
     
     for(int i = 0; i < inputs.size(); i++){
+        times = vector<float>();
         for(auto _cut_pass : possible_cut_pass){
             cut_pass = _cut_pass;
             for(int cut_bit_mask=0; cut_bit_mask < 4; cut_bit_mask++){
@@ -583,6 +612,7 @@ int main(int argc, char** argv){
     output.open ("node_selection_results.csv");
 
     for(int i = 0; i < inputs.size(); i++){
+        times = vector<float>();
         for(node_selection_index = 0; node_selection_index < 4; node_selection_index++){
             for(int r = 0; r < repeats; r++){
                 float solving_time = Solve(inputs[i]);
@@ -604,6 +634,7 @@ int main(int argc, char** argv){
     output.open ("heuristics_results.csv");
 
     for(int i = 0; i < inputs.size(); i++){
+        times = vector<float>();
         for(int bit = 0; bit < 4;bit ++){
             heuristics_bit_mask = (1<<bit);
             for(int r = 0; r < repeats; r++){
