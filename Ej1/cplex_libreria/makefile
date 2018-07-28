@@ -7,6 +7,7 @@ SELECTIONFLAGS = -D node_selection_experiments
 HEURFLAGS = -D heuristics_experiments
 LDFLAGS = -L$(CPLEXDIR)/lib/x86-64_linux/static_pic -lcplex -lpthread 
 
+all: clean normal cuts_experiments node_selection_experiments heuristics_experiments
 
 clean:
 	rm -f CommonOil SelectionOil CutsOil HeuristicOil
