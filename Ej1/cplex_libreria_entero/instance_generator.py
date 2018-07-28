@@ -26,8 +26,9 @@ def generate_input(months, oils):
             prices += "{} ".format(random.randint(50, 150))
         print(prices)
 
-print("{} {}".format(len(range(6, max_months, 5)) * len(range(5, max_oils, 5)), repeats))
+_range = range(6, max(max_months, max_oils), 20)
 
-for months in range(6, max_months, 5):
-    for oils in range(5, max_oils, 5):
-        generate_input(months, oils)
+print("{} {}".format(len(_range), repeats))
+
+for step in _range:
+    generate_input(step, step)
