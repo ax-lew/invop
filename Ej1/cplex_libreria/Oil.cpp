@@ -563,14 +563,16 @@ int main(int argc, char** argv){
     }
 
     vector<float> times;
+    ofstream output;
 
 #ifdef normal
     for(int i = 0; i < inputs.size(); i++){
         times = vector<float>();
         for(int r = 0; r < repeats; r++){
+            cout << endl << "[RUNNING-INFO] Input " << i << " Repeat " << r << "\n" << endl;
             float solving_time = Solve(inputs[i]);
             if (solving_time < 0){
-                cerr << "Input " << i << " Repeat " << r << " cut_pass " << cut_pass << " cut_bit_mask " << cut_bit_mask << " Ups!" << endl;
+                cerr << "Input " << i << " Repeat " << r << " Ups!" << endl;
             }
             else{
                 times.push_back(solving_time);
@@ -581,7 +583,6 @@ int main(int argc, char** argv){
 #endif
 
 #ifdef cuts_experiments
-    ofstream output;
     output.open ("cuts_results.csv");
 
     vector<int> possible_cut_pass = {-1, 0, 100};
@@ -592,6 +593,7 @@ int main(int argc, char** argv){
             cut_pass = _cut_pass;
             for(int cut_bit_mask=0; cut_bit_mask < 4; cut_bit_mask++){
                 for(int r = 0; r < repeats; r++){
+                    cout << endl << "[EXPERIMENT-INFO] Input " << i << " Repeat " << r << " cut_pass " << cut_pass << " cut_bit_mask " << cut_bit_mask << "\n" << endl;
                     float solving_time = Solve(inputs[i]);
                     if (solving_time < 0){
                         cerr << "Input " << i << " Repeat " << r << " cut_pass " << cut_pass << " cut_bit_mask " << cut_bit_mask << " Ups!" << endl;
@@ -608,13 +610,13 @@ int main(int argc, char** argv){
 #endif
 
 #ifdef node_selection_experiments
-    ofstream output;
     output.open ("node_selection_results.csv");
 
     for(int i = 0; i < inputs.size(); i++){
         times = vector<float>();
         for(node_selection_index = 0; node_selection_index < 4; node_selection_index++){
             for(int r = 0; r < repeats; r++){
+                cout << endl << "[EXPERIMENT-INFO] Input " << i << " Repeat " << r << " node_selection_index " << node_selection_index << "\n" << endl;
                 float solving_time = Solve(inputs[i]);
                 if (solving_time < 0){
                     cerr << "Input " << i << " Repeat " << r << " node_selection_index " << node_selection_index << " Ups!" << endl;
@@ -630,7 +632,6 @@ int main(int argc, char** argv){
 #endif
 
 #ifdef heuristics_experiments
-    ofstream output;
     output.open ("heuristics_results.csv");
 
     for(int i = 0; i < inputs.size(); i++){
@@ -638,6 +639,7 @@ int main(int argc, char** argv){
         for(int bit = 0; bit < 4;bit ++){
             heuristics_bit_mask = (1<<bit);
             for(int r = 0; r < repeats; r++){
+                cout << endl << "[EXPERIMENT-INFO] Input " << i << " Repeat " << r << " heuristics_bit_mask " << heuristics_bit_mask << "\n" << endl;
                 float solving_time = Solve(inputs[i]);
                 if (solving_time < 0){
                     cerr << "Input " << i << " Repeat " << r << " heuristics_bit_mask " << heuristics_bit_mask << " Ups!" << endl;
