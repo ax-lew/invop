@@ -531,19 +531,18 @@ float Solve(Problem &problem){
 
 double prune(vector<float> &times){
     
-    int from = 0, to = times.size();
+    int skip = 0;
     double res = 0;
 
-    if(times.size() > 10){
+    if(times.size() >= 10){
         sort(times.begin(), times.end());
-        int from = floor(times.size() / 5);
-        int to = ceil(4 * times.size() / 5);
+        skip = floor(times.size() / 5);
     }
-    for(int i = from; i < to; i++){
+    for(int i = skip; i < times.size()-skip; i++){
         res += times[i];
     }
     
-    return res/=(to-from);
+    return res/(times.size()-2*skip);
 }
 
 
