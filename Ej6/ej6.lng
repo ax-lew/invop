@@ -1,0 +1,57 @@
+MAX =  700 * PremPetrol + 600 * RegPetrol + 400 * JetFuel + 35 * FuelOil + 150 * LubeOil;
+CrudoDestilado1 <= 20000; 
+CrudoDestilado2 <= 30000; 
+CrudoDestilado1 + CrudoDestilado2 <= 45000;
+LightNaphthaReformed + MediumNaphthaReformed + HeavyNaphthaReformed <= 10000;
+LightOilCracked + HeavyOilCracked <= 8000;
+LubeOil <= 1000;
+LubeOil >= 500;
+0.4 * RegPetrol - PremPetrol <= 0;
+
+LightNaphtha - 0.1 * CrudoDestilado1 - 0.15 * CrudoDestilado2 = 0;
+MediumNaphtha - 0.2 * CrudoDestilado1 - 0.25 * CrudoDestilado2 = 0;
+HeavyNaphtha - 0.2 * CrudoDestilado1 - 0.18 * CrudoDestilado2 = 0;
+LightOil - 0.12 * CrudoDestilado1 - 0.08 * CrudoDestilado2 = 0;
+HeavyOil - 0.2 * CrudoDestilado1 - 0.19 * CrudoDestilado2 = 0;
+Residuum - 0.13 * CrudoDestilado1 - 0.12 * CrudoDestilado2 = 0;
+
+
+0.6 * LightNaphthaReformed + 0.52 * MediumNaphthaReformed + 0.45 * HeavyNaphthaReformed -  ReformedGasoline = 0;
+
+LightNaphthaReformed + LightNaphthaForBlending - LightNaphtha <= 0;
+MediumNaphthaReformed + MediumNaphthaForBlending - MediumNaphtha <= 0;
+HeavyNaphthaReformed + HeavyNaphthaForBlending - HeavyNaphtha <= 0;
+
+2 * LubeOil + ResiduumJetFuel + ResiduumFuelOil - Residuum <= 0;
+
+
+HeavyOilJetFuel + HeavyOilFuelOil + HeavyOilCrackedGasoline + HeavyOilCrackedOil - HeavyOil <= 0;
+LightOilJetFuel + LightOilFuelOil + LightOilCrackedGasoline + LightOilCrackedOil - LightOil <= 0;
+
+0.68 * LightOilCrackedOil + 0.75 * HeavyOilCrackedOil - CrackedOil = 0;
+0.28 * LightOilCrackedGasoline + 0.2 * HeavyOilCrackedGasoline - CrackedGasoline = 0;
+
+CrackedOilFuelOil + CrackedOilJetFuel - CrackedOil = 0;
+
+LightOilJetFuel + HeavyOilJetFuel + CrackedOilJetFuel + ResiduumJetFuel - JetFuel = 0;
+LightOilJetFuel + 0.6 * HeavyOilJetFuel + 1.5 * CrackedOilJetFuel + 0.05 * ResiduumJetFuel - JetFuel <= 0;
+
+LightNaphthaForBlendingRegular + LightNaphthaForBlendingPremium - LightNaphthaForBlending = 0;
+MediumNaphthaForBlendingRegular + MediumNaphthaForBlendingPremium - MediumNaphthaForBlending = 0;
+HeavyNaphthaForBlendingRegular + HeavyNaphthaForBlendingPremium - HeavyNaphthaForBlending = 0;
+ReformedGasolineRegular + ReformedGasolinePremium - ReformedGasoline = 0;
+
+CrackedGasoline - CrackedGasolinePremium - CrackedGasolineRegular = 0;
+
+LightNaphthaForBlendingRegular + MediumNaphthaForBlendingRegular + HeavyNaphthaForBlendingRegular + ReformedGasolineRegular + CrackedGasolineRegular - RegPetrol = 0;
+LightNaphthaForBlendingPremium + MediumNaphthaForBlendingPremium + HeavyNaphthaForBlendingPremium + ReformedGasolinePremium + CrackedGasolinePremium - PremPetrol = 0;
+90 * LightNaphthaForBlendingRegular + 80 * MediumNaphthaForBlendingRegular + 70 * HeavyNaphthaForBlendingRegular + 115 * ReformedGasolineRegular + 105 * CrackedGasolineRegular - 84 * RegPetrol >= 0;
+90 * LightNaphthaForBlendingPremium + 80 * MediumNaphthaForBlendingPremium + 70 * HeavyNaphthaForBlendingPremium + 115 * ReformedGasolinePremium  + 105 * CrackedGasolinePremium - 94 * PremPetrol >= 0;
+
+
+
+1/10 * LightOilFuelOil - FuelOil >= 0;
+1/4 * CrackedOilFuelOil - FuelOil >= 0;
+1/3 * HeavyOilFuelOil - FuelOil >= 0;
+ResiduumFuelOil - FuelOil >= 0;
+
