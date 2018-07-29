@@ -534,7 +534,7 @@ double prune(vector<float> &times){
     int skip = 0;
     double res = 0;
 
-    if(times.size() >= 10){
+    if(times.size() >= 5){
         sort(times.begin(), times.end());
         skip = floor(times.size() / 5);
     }
