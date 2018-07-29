@@ -111,7 +111,7 @@ void cut_conf(CPXENVptr &env){
     
     vector<int> avaiable_cuts = {CPX_PARAM_CLIQUES, CPX_PARAM_COVERS, CPX_PARAM_DISJCUTS, CPX_PARAM_FLOWCOVERS, CPX_PARAM_FLOWPATHS, CPX_PARAM_FRACCUTS, CPX_PARAM_GUBCOVERS, CPX_PARAM_MCFCUTS, CPX_PARAM_IMPLBD, CPX_PARAM_MIRCUTS, CPX_PARAM_ZEROHALFCUTS};
     for(int i = 0; i < avaiable_cuts.size(); i++) {
-        status = CPXsetintparam(env, avaiable_cuts[i], ( (cut_bit_mask&(1<<i) != 0)? 1 : -1) );
+        status = CPXsetintparam(env, avaiable_cuts[i], ( ((cut_bit_mask&(1<<i)) != 0)? 1 : -1) );
         if(status)exit(-1);
     }
     /////////
@@ -138,24 +138,24 @@ void heuristic_conf(CPXENVptr &env){
 void presolve_conf(CPXENVptr &env){
     /////////
     // Presolve
-    status = CPXsetintparam (env, CPX_PARAM_MIPCBREDLP, ( (presolve_bit_mask & (1<<0) != 0)? CPX_ON : CPX_OFF));
+    status = CPXsetintparam (env, CPX_PARAM_MIPCBREDLP, ( ((presolve_bit_mask & (1<<0)) != 0)? CPX_ON : CPX_OFF));
     if(status)exit(-1);
     
     // LINEAR REDUCTION OF VARIABLES
-    status = CPXsetintparam (env, CPX_PARAM_PRELINEAR, ( (presolve_bit_mask & (1<<1) != 0)? 1 : 0));
+    status = CPXsetintparam (env, CPX_PARAM_PRELINEAR, ( ((presolve_bit_mask & (1<<1)) != 0)? 1 : 0));
     if(status)exit(-1);
     
     // PRIMAL AND DUAL REDUCTIONS (3), NONE (0)
-    status = CPXsetintparam (env, CPX_PARAM_REDUCE, ( (presolve_bit_mask & (1<<2) != 0)? 3 : 0));
+    status = CPXsetintparam (env, CPX_PARAM_REDUCE, ( ((presolve_bit_mask & (1<<2)) != 0)? 3 : 0));
     if(status)exit(-1);
 
     // -1 let CPLEX choose; default | 0 Turn off represolve
-    status = CPXsetintparam (env, CPX_PARAM_REPEATPRESOLVE, ( (presolve_bit_mask & (1<<3) != 0)? -1 : 0));
+    status = CPXsetintparam (env, CPX_PARAM_REPEATPRESOLVE, ( ((presolve_bit_mask & (1<<3)) != 0)? -1 : 0));
     if(status)exit(-1);
 
     // THERE ARE MORE LEVELS 1-3 OF AGGRESSIVE PROBING ON VARIABLES
-    status = CPXsetintparam (env, CPX_PARAM_PROBE, ( (presolve_bit_mask & (1<<4) != 0)? 0 : -1));
-    if(status)exit(-1);    
+    status = CPXsetintparam (env, CPX_PARAM_PROBE, ( ((presolve_bit_mask & (1<<4)) != 0)? 0 : -1));
+    if(status)exit(-1);   
     /////////
 
     return;
@@ -565,6 +565,9 @@ int main(int argc, char** argv){
     ofstream output;
 
 #ifdef normal
+    cut_pass = 0;
+    cut_bit_mask = (1<<12)-1;
+    heuristics_bit_mask = (1<<5)-1;
     for(int i = 0; i < inputs.size(); i++){
         times = vector<float>();
         for(int r = 0; r < repeats; r++){
