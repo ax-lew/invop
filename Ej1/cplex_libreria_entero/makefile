@@ -1,5 +1,5 @@
 CCC = g++
-CPLEXDIR = /opt/ibm/ILOG/CPLEX_Studio126/cplex
+CPLEXDIR = /media/libre/cplex
 CFLAGS = -std=c++11 -DIL_STD -O -DNDEBUG -I$(CPLEXDIR)/include -fPIC -m64 -DILOUSEMT -D_REENTRANT -DILM_REENTRANT
 NORMALFLAGS = -D normal
 CUTSFLAGS = -D cuts_experiments

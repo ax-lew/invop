@@ -13,7 +13,7 @@ int presolve_bit_mask = 0; // presolve all but CPX_PARAM_MIPCBREDLP
 int heuristics_bit_mask = 0; //all the heuristics
 int cut_bit_mask = 0; // all the cuts available
 int cut_pass = -1; //until 100 plane cuts in the initial node
-int node_selection_index = 0;
+int node_selection_index = 3;
 
 struct Problem {
     vector<float> hardness;
